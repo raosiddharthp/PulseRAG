@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>PulseRAG — Auth Test</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 700px; margin: 3rem auto; padding: 0 1rem; }
+button { padding: 10px 18px; font-size: 14px; cursor: pointer; margin-right: 8px; }
+pre { background: #f2f0eb; padding: 1rem; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; font-size: 11px; }
+</style>
+</head>
+<body>
+<h2>PulseRAG — Auth + Gateway Test</h2>
+<button id="signin-btn">Sign in with Google</button>
+<button id="call-btn" disabled>Call Gateway /query</button>
+<p id="status"></p>
+<pre id="output">Not signed in.</pre>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAmRTfWU7YD7CQzaVqnU5cbxiaXbXxps9I",
+  authDomain: "pulserag-prod.firebaseapp.com",
+  projectId: "pulserag-prod",
+  storageBucket: "pulserag-prod.firebasestorage.app",
+  messagingSenderId: "165472773798",
+  appId: "1:165472773798:web:3411eef73999c51e8bb667"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+let idToken = null;
+const GATEWAY_URL = "https://pulserag-gateway-240m7teu.nw.gateway.dev/query";
+
+document.getElementById("signin-btn").addEventListener("click", async () => {
+  const provider = new GoogleAuthProvider();
+  try {
+    const result = await signInWithPopup(auth, provider);
+    idToken = await result.user.getIdToken();
+    document.getElementById("status").textContent = `Signed in as ${result.user.email}`;
+    document.getElementById("output").textContent = idToken;
+    document.getElementById("call-btn").disabled = false;
+  } catch (err) {
+    document.getElementById("status").textContent = "Sign-in error: " + err.message;
+  }
+});
+
+document.getElementById("call-btn").addEventListener("click", async () => {
+  document.getElementById("output").textContent = "Calling gateway...";
+  try {
+    const res = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + idToken
+      },
+      body: JSON.stringify({ query: "Which of our at-risk deals this quarter have fulfilment issues that could affect close?" })
+    });
+    const text = await res.text();
+    document.getElementById("output").textContent = `Status: ${res.status}\n\n${text}`;
+  } catch (err) {
+    document.getElementById("output").textContent = "Fetch error: " + err.message;
+  }
+});
+</script>
+</body>
+</html>

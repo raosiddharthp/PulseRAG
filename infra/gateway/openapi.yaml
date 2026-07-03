@@ -1,0 +1,42 @@
+swagger: '2.0'
+info:
+  title: pulserag-api
+  description: PulseRAG query API gateway
+  version: 1.0.0
+host: pulserag-api.appspot.com
+schemes:
+  - https
+produces:
+  - application/json
+x-google-backend:
+  address: https://pulserag-service-165472773798.europe-west2.run.app
+securityDefinitions:
+  firebase:
+    authorizationUrl: ""
+    flow: "implicit"
+    type: "oauth2"
+    x-google-issuer: "https://securetoken.google.com/pulserag-prod"
+    x-google-jwks_uri: "https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com"
+    x-google-audiences: "pulserag-prod"
+paths:
+  /query:
+    post:
+      summary: Run a PulseRAG query
+      operationId: runQuery
+      security:
+        - firebase: []
+      x-google-backend:
+        address: https://pulserag-service-165472773798.europe-west2.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: Successful query
+    options:
+      summary: CORS preflight
+      operationId: corsQuery
+      x-google-backend:
+        address: https://pulserag-service-165472773798.europe-west2.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: CORS preflight response

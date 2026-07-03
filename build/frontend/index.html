@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PulseRAG — Live Query Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #fafaf8; --bg2: #f2f0eb; --bg3: #e8e5de;
+  --text: #1a1917; --text2: #5a5852; --text3: #8a8880;
+  --border: #d8d5ce; --border2: #c8c5be;
+  --teal: #0a6b52; --teal-bg: #e8f5f0; --teal-border: #80c8b0;
+  --amber: #b07010; --amber-bg: #fdf4e3; --amber-border: #e8c870;
+  --coral: #b03820; --coral-bg: #fdf0ec; --coral-border: #e8a090;
+  --blue: #1850a0; --blue-bg: #eaf2fe; --blue-border: #90b8e8;
+  --serif: 'DM Serif Display', Georgia, serif;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Inter', system-ui, sans-serif;
+  --r: 6px; --r-lg: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 0.875rem 2.5rem; border-bottom: 1px solid var(--border); }
+.topbar-title { font-family: var(--mono); font-size: 12px; color: var(--text3); letter-spacing: 0.05em; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.topbar-tag { font-family: var(--mono); font-size: 10px; padding: 3px 8px; background: var(--teal-bg); color: var(--teal); border: 1px solid var(--teal-border); border-radius: 99px; }
+.auth-btn { font-family: var(--mono); font-size: 11px; padding: 6px 14px; border: 1px solid var(--border2); border-radius: var(--r); background: white; cursor: pointer; color: var(--text2); }
+.auth-btn:hover { background: var(--bg2); }
+.user-chip { font-family: var(--mono); font-size: 11px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
+.user-chip img { width: 22px; height: 22px; border-radius: 50%; }
+
+.content { max-width: 780px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+.doc-title { font-family: var(--serif); font-size: clamp(26px, 4vw, 36px); margin-bottom: 0.5rem; }
+.doc-sub { font-size: 13.5px; color: var(--text3); margin-bottom: 2rem; }
+
+.auth-gate { border: 1px solid var(--border); border-radius: var(--r-lg); background: white; padding: 2rem; text-align: center; margin-bottom: 2rem; }
+.auth-gate-text { font-size: 13.5px; color: var(--text2); margin-bottom: 1rem; }
+.auth-gate-btn { font-family: var(--mono); font-size: 12px; padding: 10px 20px; background: var(--text); color: var(--bg); border: none; border-radius: var(--r); cursor: pointer; }
+.auth-gate-btn:hover { opacity: 0.85; }
+
+.query-box { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+.query-input { flex: 1; padding: 12px 14px; border: 1px solid var(--border2); border-radius: var(--r); font-size: 14px; font-family: var(--sans); background: white; }
+.query-input:focus { outline: none; border-color: var(--teal); }
+.query-input:disabled { background: var(--bg2); color: var(--text3); }
+.run-btn { padding: 12px 20px; background: var(--text); color: var(--bg); border: none; border-radius: var(--r); font-family: var(--mono); font-size: 12px; cursor: pointer; white-space: nowrap; }
+.run-btn:hover { opacity: 0.85; }
+.run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.scenario-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 2rem; }
+.scenario-chip { font-family: var(--mono); font-size: 11px; padding: 6px 12px; border: 1px solid var(--border2); border-radius: 99px; background: white; color: var(--text2); cursor: pointer; }
+.scenario-chip:hover:not(:disabled) { background: var(--bg2); }
+.scenario-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.status-line { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-bottom: 1rem; min-height: 16px; }
+.status-line.error { color: var(--coral); }
+
+.meta-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1.25rem; }
+.meta-badge { font-family: var(--mono); font-size: 10px; padding: 3px 9px; border-radius: 99px; background: var(--bg2); color: var(--text3); border: 1px solid var(--border); }
+.meta-badge.sensitivity-high { background: var(--coral-bg); color: var(--coral); border-color: var(--coral-border); }
+.meta-badge.sensitivity-medium { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+.meta-badge.sensitivity-low { background: var(--teal-bg); color: var(--teal); border-color: var(--teal-border); }
+.meta-badge.cached { background: var(--blue-bg); color: var(--blue); border-color: var(--blue-border); }
+
+.result-panel { border: 1px solid var(--border); border-radius: var(--r-lg); background: white; padding: 1.5rem; min-height: 120px; }
+.result-empty { font-size: 13px; color: var(--text3); font-style: italic; }
+
+.out-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.out-table th { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; background: var(--bg2); }
+.out-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text2); }
+.out-table tr:last-child td { border-bottom: none; }
+
+.out-bar-row { display: grid; grid-template-columns: 110px 1fr 90px; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 12px; }
+.out-bar-track { background: var(--bg3); border-radius: 99px; height: 10px; overflow: hidden; }
+.out-bar-fill { height: 10px; border-radius: 99px; background: var(--teal); }
+.out-bar-value { font-family: var(--mono); text-align: right; color: var(--text2); }
+.chart-label { font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1rem; }
+
+.out-cards { display: flex; flex-direction: column; gap: 8px; }
+.out-card { background: var(--bg2); border-left: 3px solid var(--border2); border-radius: var(--r); padding: 0.75rem 0.9rem; }
+.out-card.status-high { border-left-color: var(--coral); }
+.out-card.status-med { border-left-color: var(--amber); }
+.out-card.status-low { border-left-color: var(--teal); }
+.out-card-title { font-size: 13px; color: var(--text); margin-bottom: 3px; }
+.out-card-sub { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+
+.out-prose { font-size: 14.5px; line-height: 1.7; color: var(--text2); }
+
+.source-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.source-tag { font-family: var(--mono); font-size: 9.5px; padding: 3px 8px; border-radius: 99px; background: var(--bg2); color: var(--text3); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-title">pulserag / live query console</span>
+  <div class="topbar-right" id="auth-area">
+    <span class="topbar-tag">Build phase · Gemini wired</span>
+    <button class="auth-btn" id="topbar-signin-btn">Sign in with Google</button>
+  </div>
+</div>
+
+<div class="content">
+  <h1 class="doc-title">PulseRAG</h1>
+  <p class="doc-sub">Live query console — Firebase-authenticated, routed through API Gateway to the deployed Gemini + Firestore pipeline.</p>
+
+  <div class="auth-gate" id="auth-gate">
+    <div class="auth-gate-text">Sign in with Google to run live queries against the deployed service.</div>
+    <button class="auth-gate-btn" id="gate-signin-btn">Sign in with Google</button>
+  </div>
+
+  <div id="query-area" style="display:none">
+    <div class="query-box">
+      <input type="text" class="query-input" id="query-input" placeholder="Ask a cross-system enterprise question..."/>
+      <button class="run-btn" id="run-btn">run query →</button>
+    </div>
+
+    <div class="scenario-row">
+      <button class="scenario-chip" data-q="Which of our at-risk deals this quarter have fulfilment issues that could affect close?">Scenario 1 · deal risk</button>
+      <button class="scenario-chip" data-q="Which SKUs are below reorder threshold and need immediate action?">Scenario 2 · inventory</button>
+      <button class="scenario-chip" data-q="How is our Q2 pipeline tracking against target by deal stage?">Scenario 3 · pipeline</button>
+      <button class="scenario-chip" data-q="How many open P1 tickets do we have and which accounts are at SLA breach risk?">Scenario 4 · tickets</button>
+    </div>
+
+    <div class="status-line" id="status-line"></div>
+
+    <div class="result-panel" id="result-panel">
+      <div class="result-empty">Run a query to see the live, adaptively-rendered response.</div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAmRTfWU7YD7CQzaVqnU5cbxiaXbXxps9I",
+  authDomain: "pulserag-prod.firebaseapp.com",
+  projectId: "pulserag-prod",
+  storageBucket: "pulserag-prod.firebasestorage.app",
+  messagingSenderId: "165472773798",
+  appId: "1:165472773798:web:3411eef73999c51e8bb667"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+
+const GATEWAY_URL = "https://pulserag-gateway-240m7teu.nw.gateway.dev/query";
+let idToken = null;
+
+const authArea = document.getElementById("auth-area");
+const authGate = document.getElementById("auth-gate");
+const queryArea = document.getElementById("query-area");
+
+async function doSignIn() {
+  const provider = new GoogleAuthProvider();
+  try {
+    const result = await signInWithPopup(auth, provider);
+    idToken = await result.user.getIdToken();
+    onSignedIn(result.user);
+  } catch (err) {
+    alert("Sign-in error: " + err.message);
+  }
+}
+
+function onSignedIn(user) {
+  authGate.style.display = "none";
+  queryArea.style.display = "block";
+  authArea.innerHTML = `
+    <span class="topbar-tag">Build phase · Gemini wired</span>
+    <span class="user-chip"><img src="${user.photoURL || ''}" onerror="this.style.display='none'"/>${user.email}</span>
+  `;
+}
+
+document.getElementById("topbar-signin-btn").addEventListener("click", doSignIn);
+document.getElementById("gate-signin-btn").addEventListener("click", doSignIn);
+
+const input = document.getElementById('query-input');
+const runBtn = document.getElementById('run-btn');
+const statusLine = document.getElementById('status-line');
+const resultPanel = document.getElementById('result-panel');
+
+document.querySelectorAll('.scenario-chip').forEach((chip) => {
+  chip.addEventListener('click', () => {
+    input.value = chip.dataset.q;
+    runQuery();
+  });
+});
+
+runBtn.addEventListener('click', runQuery);
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') runQuery();
+});
+
+async function runQuery() {
+  const query = input.value.trim();
+  if (!query) return;
+  if (!idToken) {
+    statusLine.className = 'status-line error';
+    statusLine.textContent = 'Not signed in.';
+    return;
+  }
+
+  runBtn.disabled = true;
+  statusLine.className = 'status-line';
+  statusLine.textContent = 'classifying intent, federating connectors, synthesising...';
+  resultPanel.innerHTML = '<div class="result-empty">Loading...</div>';
+
+  try {
+    const res = await fetch(GATEWAY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + idToken
+      },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Server returned ${res.status}`);
+    }
+
+    const data = await res.json();
+    render(data);
+  } catch (err) {
+    statusLine.className = 'status-line error';
+    statusLine.textContent = 'Error: ' + err.message;
+    resultPanel.innerHTML = '<div class="result-empty">No result.</div>';
+  } finally {
+    runBtn.disabled = false;
+  }
+}
+
+function render(data) {
+  const { classification, result, sources, cached } = data;
+
+  statusLine.textContent = `connectors: [${classification.connectors.join(', ')}] · format: ${classification.format} · sensitivity: ${classification.sensitivity}`;
+
+  const badges = [
+    `<span class="meta-badge sensitivity-${classification.sensitivity}">${classification.sensitivity} sensitivity</span>`,
+    `<span class="meta-badge">${classification.connectors.join(' + ')}</span>`,
+  ];
+  if (cached) badges.push(`<span class="meta-badge cached">served from cache</span>`);
+
+  let body = '';
+  if (result.format === 'table' && result.table) {
+    body = renderTable(result.table);
+  } else if (result.format === 'chart' && result.chart) {
+    body = renderChart(result.chart);
+  } else if (result.format === 'cards' && result.cards) {
+    body = renderCards(result.cards);
+  } else if (result.format === 'prose' && result.prose) {
+    body = `<div class="out-prose">${escapeHtml(result.prose)}</div>`;
+  } else {
+    body = '<div class="result-empty">No structured result returned.</div>';
+  }
+
+  const sourceTags = (sources || [])
+    .map((s) => `<span class="source-tag">⌁ ${s.source} · ${s.connector}</span>`)
+    .join('');
+
+  resultPanel.innerHTML = `
+    <div class="meta-row">${badges.join('')}</div>
+    ${body}
+    <div class="source-row">${sourceTags}</div>
+  `;
+}
+
+function renderTable(table) {
+  const head = table.columns.map((c) => `<th>${escapeHtml(c)}</th>`).join('');
+  const rows = table.rows
+    .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(String(cell))}</td>`).join('')}</tr>`)
+    .join('');
+  return `<table class="out-table"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderChart(chart) {
+  const max = Math.max(...chart.series.map((s) => s.value), 1);
+  const bars = chart.series
+    .map((s) => {
+      const pct = Math.round((s.value / max) * 100);
+      return `<div class="out-bar-row">
+        <div>${escapeHtml(s.name)}</div>
+        <div class="out-bar-track"><div class="out-bar-fill" style="width:${pct}%"></div></div>
+        <div class="out-bar-value">$${(s.value / 1000).toFixed(0)}K</div>
+      </div>`;
+    })
+    .join('');
+  return `<div class="chart-label">${escapeHtml(chart.label)}</div>${bars}`;
+}
+
+function renderCards(cards) {
+  const items = cards
+    .map((c) => {
+      const statusClass = c.status && c.status !== 'none' ? `status-${c.status}` : '';
+      return `<div class="out-card ${statusClass}">
+        <div class="out-card-title">${escapeHtml(c.title)}</div>
+        <div class="out-card-sub">${escapeHtml(c.subtitle)}</div>
+      </div>`;
+    })
+    .join('');
+  return `<div class="out-cards">${items}</div>`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>
